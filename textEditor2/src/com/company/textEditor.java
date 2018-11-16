@@ -18,9 +18,8 @@ public class textEditor extends JFrame{
     String str_path;
     String str_filename1;
     String str_filename2;
-    private List<String>  errorsplit;
-    private List<Integer> linenumbers;
-    int linenumber;
+    int num;
+    boolean error=false;
     JTextArea text = new JTextArea();
     JTextArea display = new JTextArea("result:");
     final String envp = "Path=C:\\Program Files\\Java\\jdk-10.0.2\\bin";
@@ -45,8 +44,8 @@ public class textEditor extends JFrame{
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_F4:{
-                        if(!linenumbers.isEmpty()){
-                            showNextErrorLine();
+                        if(error){
+                            ErrorLine();
                         }
                         break;
                     }
@@ -58,8 +57,8 @@ public class textEditor extends JFrame{
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_F4:{
-                        if(!linenumbers.isEmpty()){
-                            showNextErrorLine();
+                        if(error){
+                            ErrorLine();
                         }
                         break;
                     }
@@ -94,51 +93,16 @@ public class textEditor extends JFrame{
         setJMenuBar(menubar);
         setVisible(true);
     }
-//    public void split(String line){
-//        errorsplit.clear();
-//        linenumbers.clear();
-//        Pattern pattern=Pattern.compile("\\w+java:[0-9]+]");
-//        Matcher matcher= pattern.matcher(line);
-//        while(matcher.find()){
-//            errorsplit.add(matcher.group());
-//        }
-//        if(!errorsplit.isEmpty()){
-//            for(String s : errorsplit){
-//                String sNum = s.substring(s.lastIndexOf(':') + 1, s.length());
-//                linenumbers.add(Integer.valueOf(sNum));
-//
-//            }
-//        }
-//    }
-    public void split(String lin){
-        String regex = "(([a-zA-Z])\\w+.java:[0-9]+)";
-        errorsplit.clear();
-        Pattern ptn = Pattern.compile(regex);
-        Matcher matcher = ptn.matcher(lin);
-        while(matcher.find()){
-            errorsplit.add(matcher.group());
-        }
-        if(!errorsplit.isEmpty()){
-            linenumbers.clear();
-            for(String s : errorsplit){
-                String sNum = s.substring(s.lastIndexOf(':') + 1, s.length());
-                linenumbers.add(Integer.valueOf(sNum));
-                System.out.println(sNum);
-            }
-        }
-        //System.out.println(regexSplitLine);
-    }
-    public void showNextErrorLine(){
+
+    public void ErrorLine(){
         try{
-            int lineNum = linenumbers.get(linenumber) - 1;
+            int lineNum = num-1;
             int selectionStart = text.getLineStartOffset(lineNum);
             int selectionEnd = text.getLineEndOffset(lineNum);
             text.requestFocus();
             text.setSelectionStart(selectionStart);
             text.setSelectionEnd(selectionEnd);
-            linenumber++;
-            if(linenumber >= linenumbers.size())
-                linenumber = 0;
+
         }
         catch (Exception e){
             e.printStackTrace();
@@ -243,12 +207,30 @@ public class textEditor extends JFrame{
                 String line = null;
                 StringBuilder stringbuilder = new StringBuilder();
                 stringbuilder.append("cmd /c javac "+ str_filename2 +".java && java "+str_filename2+"\n");
+                boolean CompileSuccess = false;
                 while ((line = reader.readLine()) != null) {
                     stringbuilder.append(line + "\n");
-
+                    CompileSuccess=true;
                 }
-                split(stringbuilder.toString());
-                display.setText(stringbuilder.toString());
+                reader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+                while ((line = reader.readLine()) != null) {
+                    stringbuilder.append(line + "\n");
+                }
+                if(CompileSuccess) {
+                    error=false;
+                    display.setText("Result: \n" + stringbuilder.toString());
+                }
+                else{
+                    error=true;
+                    String regex = "(([a-zA-Z])\\w+.java:[0-9]+)";
+                    Pattern ptn = Pattern.compile(regex);
+                    Matcher matcher = ptn.matcher(stringbuilder.toString());
+                    matcher.find();
+                    String sNum = matcher.group().substring(matcher.group().lastIndexOf(':') + 1, matcher.group().length());
+                    num=Integer.valueOf(sNum);
+                    display.setText(num+"Errors: \n" + stringbuilder.toString() + "" +
+                            "\n Compile Error: Please press F4 to skip to the error line");
+                }
 
             }
             catch(Exception el){
@@ -281,12 +263,19 @@ public class textEditor extends JFrame{
                 while ((line = reader.readLine()) != null) {
                     stringbuilder.append(line + "\n");
                 }
-                if(CompileSuccess)
-                    display.setText("Result: \n"+stringbuilder.toString());
+                if(CompileSuccess) {
+                    error=false;
+                    display.setText("Result: \n" + stringbuilder.toString());
+                }
                 else{
-                    save=stringbuilder.toString();
-//                    split(save);
-                    display.setText("Errors: \n" + save + "" +
+                    error=true;
+                    String regex = "(([a-zA-Z])\\w+.java:[0-9]+)";
+                    Pattern ptn = Pattern.compile(regex);
+                    Matcher matcher = ptn.matcher(stringbuilder.toString());
+                    matcher.find();
+                    String sNum = matcher.group().substring(matcher.group().lastIndexOf(':') + 1, matcher.group().length());
+                    num=Integer.valueOf(sNum);
+                    display.setText(num+"Errors: \n" + stringbuilder.toString() + "" +
                             "\n Compile Error: Please press F4 to skip to the error line");
                 }
 //
